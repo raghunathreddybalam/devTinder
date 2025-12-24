@@ -22,3 +22,9 @@ push all code to remote origin
 - Put more specific paths (e.g., `/test/rim`) above broader ones (e.g., `/test` or `/`).
 - If a broader handler should not block downstream handlers, call `next()` inside it.
 - Use `app.get("/")` if you only want to serve the root; keep catch-all `/` handlers last.
+
+4.
+
+- Route params example: `app.get("/user/:userId/:name/:password", ...)`—use `req.params` to read path variables when the values are part of the URL and required to reach that route.
+- Regex route example: `app.get(/\.fly$/, ...)` to match any path ending with `.fly`; useful when you need pattern-based matches instead of fixed strings.
+- Query params example: `app.get("/user", ...)` with `req.query` to read `?key=value` filters; good for optional filters, pagination, or flags without changing the path.
