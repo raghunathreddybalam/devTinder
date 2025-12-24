@@ -2,13 +2,27 @@ const express = require("express");
 
 const app  = express();
 
-app.use("/test",(req,res)=>{
-    res.send(" hellow dev tinder")
+// app.use("/test",(req,res)=>{
+//     res.send(" hellow dev tinder")
+// })
+app.get("/user",(req,res)=>{
+    res.send({firstName: "raghunath",lastname:"reddy"})
 })
-
-app.use("/test2",(req,res)=>{
-    res.send(" hellow new")
+app.post("/user",(req,res)=>{
+    res.send("user is created")
 })
+app.delete("/user",(req,res)=>{
+    res.send("user is delted")
+})
+// app.use("/test/rim",(req,res)=>{
+//     res.send(" hellow abrack")
+// })
+// app.use("/test2/new",(req,res)=>{
+//     res.send(" hellow old")
+// })
+// app.use("/",(req,res)=>{
+//     res.send(" hellow dev listener")
+// })
 app.listen(3000,()=>{
     console.log("server is running on port")
 }
