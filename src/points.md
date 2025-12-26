@@ -34,3 +34,17 @@ push all code to remote origin
 - Route-level middleware chain: `app.use("/user", h1, h2, h3)` runs handlers in order; each must call `next()` to pass control.
 - If a handler sends a response without calling `next()`, the chain stops there.
 - Use this pattern to layer concerns: auth, validation, logging, then final responder.
+
+6.
+
+- Separated auth middleware into `middlewares/auth.js` with `adminAuth` and `userAuth` that check a token and return 401 when unauthorized.
+- Mounted admin guard globally: `app.use("/admin", adminAuth)` so all `/admin/*` routes require the admin token.
+- Added user-specific middleware: `app.use("/user/profile", userAuth, handler)` to protect profile endpoints.
+- Example public route: `app.use("/user/login", ...)` remains open; protected routes sit behind their respective middleware.
+
+7.
+
+- Error handlers must have 4 args `(err, req, res, next)` or Express won’t treat them as error middleware.
+- To reach them, a normal handler should `throw` or call `next(err)`, e.g., `app.get("/getuserdata", (req, res, next) => next(new Error("user not found")));`.
+- Register the global error handler after all routes: `app.use((err, req, res, next) => res.status(500).send("something went wrong"));`.
+- If you send a response in a handler, don’t call `next()` afterward unless you intend further processing.
