@@ -2,18 +2,35 @@ const express = require("express");
 
 const app  = express();
 
+app.use("/user",
+    (req,res,next)=>{
+    //res.send("hello bhia")
+    next()
+},(req,res,next)=>{
+    next()
+    //res.send("nam bola na")
+    
+},(req,res,next)=>{
+    res.send("dhinde na")
+},(req,res,next)=>{
+    res.send("nam bola na")
+})
 
-app.get("/user/:userId/:name/:password",(req,res)=>{
-    console.log(req.params)
-    res.send("user is created")
-})
-app.get(/.*.fly$/,(req,res)=>{
-    res.send("hellow fly")})
+app.listen(3000,()=>{
+    console.log("server is running on port")
+}
+)
+// app.get("/user/:userId/:name/:password",(req,res)=>{
+//     console.log(req.params)
+//     res.send("user is created")
+// })
+// app.get(/.*.fly$/,(req,res)=>{
+//     res.send("hellow fly")})
    
-app.get("/user",(req,res)=>{
-    console.log(req.query)
-    res.send("namasthe bhai")
-})
+// app.get("/user",(req,res)=>{
+//     console.log(req.query)
+//     res.send("namasthe bhai")
+// })
 // app.use("/test",(req,res)=>{
 //     res.send(" hellow dev tinder")
 // })
@@ -36,7 +53,3 @@ app.get("/user",(req,res)=>{
 // app.use("/",(req,res)=>{
 //     res.send(" hellow dev listener")
 // })
-app.listen(3000,()=>{
-    console.log("server is running on port")
-}
-)
