@@ -48,3 +48,19 @@ push all code to remote origin
 - To reach them, a normal handler should `throw` or call `next(err)`, e.g., `app.get("/getuserdata", (req, res, next) => next(new Error("user not found")));`.
 - Register the global error handler after all routes: `app.use((err, req, res, next) => res.status(500).send("something went wrong"));`.
 - If you send a response in a handler, don’t call `next()` afterward unless you intend further processing.
+
+8.
+
+- MongoDB Atlas quick setup: copy the SRV URI from Atlas, append a DB name (e.g., `/devTinder`), and use it in `mongoose.connect`.
+- Allow your IP in Atlas Network Access (or 0.0.0.0/0 temporarily) and wait ~1 minute for rules to apply.
+- If you see `EBADNAME _mongodb._tcp...`, it’s a DNS/SRV issue—recheck the host spelling or use a non-SRV URI.
+- If you see “Could not connect… IP isn’t whitelisted,” add your current IP; VPN/proxy IPs may differ.
+
+9.
+
+- Connect to the database before starting the server so requests don’t fail mid-flight when DB is unavailable.
+- Pattern: await `connectDB()` and only then call `app.listen(...)`; if connect fails, log and exit instead of serving bad responses.
+
+10.
+
+- In `models/user.js`, defined a Mongoose schema with `firstName`, `lastName`, `email`, `password`, `age`, and `gender`, and created a reusable `User` model for database operations.

@@ -1,30 +1,47 @@
 const express = require("express");
 
 const app  = express();
-const { adminAuth, userAuth } = require("./middlewares/auth");
+const connectDB = require("./config/database");
+// const { adminAuth, userAuth } = require("./middlewares/auth");
+const User = require("./models/user")
 
+app.post("/signup", async(req,res)=>{
+   const user = new User({
+    firstName : "rohit",
+    lastName : "sharma",
+    password :" dhddjjje",
+    email: "rohit@gmail.com"
 
-// app.use("/",(err,req,res)=>{
+})
+try {
+   await  user.save();
+    res.send("user added successully")
+} catch (error){
+    res.status(400).send("Error saving the user" + error.message)
+}
+})
+
+// // app.use("/",(err,req,res)=>{
+// //     if(err){
+// //         res.status(500).send("something went wrong")
+// //     }
+    
+// // })
+// app.use("/getuserdata",(req,res)=>{
+// // try{
+// throw new Error("user not found")
+// res.send("user is done")
+// //     throw new Error("user not found")
+// // } catch (error){
+// //     res.status(500).send("user not found")
+// // }
+// })
+// app.use("/",(err,req,res,next)=>{
 //     if(err){
 //         res.status(500).send("something went wrong")
 //     }
     
 // })
-app.use("/getuserdata",(req,res)=>{
-// try{
-throw new Error("user not found")
-res.send("user is done")
-//     throw new Error("user not found")
-// } catch (error){
-//     res.status(500).send("user not found")
-// }
-})
-app.use("/",(err,req,res,next)=>{
-    if(err){
-        res.status(500).send("something went wrong")
-    }
-    
-})
 
 //Separated auth middleware into `middlewares/auth.js` with `adminAuth` and `userAuth` that check a token and return 401 when unauthorized.
 
@@ -48,11 +65,18 @@ app.use("/",(err,req,res,next)=>{
 //     //res.send("i am next")
 //     //next()
 // })
+connectDB()
+.then(()=>{
+    console.log("connected to mongo databaase")
+    app.listen(3000,()=>{
+        console.log("server is running on port")
+    }
+    )
+})
+.catch((err)=>{
+    console.log("database not connected")
+})
 
-app.listen(3000,()=>{
-    console.log("server is running on port")
-}
-)
 // Route params example: `app.get("/user/:userId/:name/:password", ...)`—use `req.params` to read path variables when the values are part of the URL and required to reach that route.
 
 // app.get("/user/:userId/:name/:password",(req,res)=>{
