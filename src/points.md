@@ -64,3 +64,10 @@ push all code to remote origin
 10.
 
 - In `models/user.js`, defined a Mongoose schema with `firstName`, `lastName`, `email`, `password`, `age`, and `gender`, and created a reusable `User` model for database operations.
+
+11.
+
+- `app.use(express.json())` is built-in middleware that parses incoming JSON request bodies and populates `req.body` with the parsed object.
+- Without it, `req.body` would be `undefined` when clients send JSON data.
+- Created a `/signup` POST route that reads user data from `req.body`, creates a new `User` instance, and saves it to MongoDB.
+- Wrapped the save operation in try-catch: success returns "user added successfully", failure returns 400 with the error message.
