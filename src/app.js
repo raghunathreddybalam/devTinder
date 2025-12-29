@@ -5,6 +5,10 @@ const connectDB = require("./config/database");
 // const { adminAuth, userAuth } = require("./middlewares/auth");
 const User = require("./models/user")
 app.use(express.json())
+
+
+ 
+
 app.post("/signup", async(req,res)=>{
     console.log(req.body,"req")
    const user = new User(req.body)
@@ -15,7 +19,72 @@ try {
     res.status(400).send("Error saving the user" + error.message)
 }
 })
+// get user by id 
+app.get ("/user",async (req,res)=>{
+    const userEmail = req.body.email;
+    try{
+        const user = await User.findOne({email:userEmail})
+        if(!user){
+            res.status(404).send("user not found")
+        }else{
+            res.send(user)
+        }
+       
+        // const user =await User.find({email:userEmail})
+        // if(user.length === 0){
+        //     res.status(404).send("user not found")
+        // }else {
+        //     res.send(user);
+        // }
+      
+        
+    }catch(error){
+        res.status(400).send("something went wrong")
+    }
 
+})
+// get user by by id
+app.get("/getbyid", async (req,res)=>{
+    const userpassword = req.body.password
+    try{
+    const user = await User.findOne({password:userpassword})
+    console.log(user)
+    res.send(user)
+    } catch{
+        res.status(400).send("something wrong")
+    }
+})
+// delete user from db
+app.delete("/deleteuser", async (req,res)=>{
+    const userId = req.body.userId;
+    try{
+        const user = await User.findByIdAndDelete(userId)
+        res.send(user)
+    }catch{
+        res.status(400).send("something wrong") 
+    }
+})
+app.patch("/updateone",async (req,res)=>{
+    const userId = req.body.userId
+    const data = req.body;
+    try{
+    const user = await User.findByIdAndUpdate({_id:userId},data)
+    res.send(user)
+    }catch{
+        res.status(400).send("something wrong") 
+    }
+})
+// get all users from db
+app.get("/feed",async (req,res)=>{
+    //const user = req.body;
+    try{
+        const user = await User.find({})
+        res.send(user)
+
+    } catch(error){
+ res.status(400).send("something went wrong")
+    }
+})
 // // app.use("/",(err,req,res)=>{
 // //     if(err){
 // //         res.status(500).send("something went wrong")
