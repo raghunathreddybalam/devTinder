@@ -64,11 +64,16 @@ app.delete("/deleteuser", async (req,res)=>{
         res.status(400).send("something wrong") 
     }
 })
+// update the fields
+
 app.patch("/updateone",async (req,res)=>{
     const userId = req.body.userId
     const data = req.body;
     try{
-    const user = await User.findByIdAndUpdate({_id:userId},data)
+    const user = await User.findByIdAndUpdate({_id:userId},data,{
+        runValidators:true
+    })
+
     res.send(user)
     }catch{
         res.status(400).send("something wrong") 
