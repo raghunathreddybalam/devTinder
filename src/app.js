@@ -1,5 +1,6 @@
 const express = require("express");
 
+
 const app  = express();
 const connectDB = require("./config/database");
 // const { adminAuth, userAuth } = require("./middlewares/auth");
@@ -66,9 +67,22 @@ app.delete("/deleteuser", async (req,res)=>{
 })
 // update the fields
 
-app.patch("/updateone",async (req,res)=>{
-    const userId = req.body.userId
+app.patch("/updateone/:userId",async (req,res)=>{
+    const userId = req.params?.userId
     const data = req.body;
+    
+    const ALLOWED_UPDATES =["gender","photoUrl","skills","password"]
+
+    const isAllowed = Object.keys(data).every((k)=>
+        ALLOWED_UPDATES.includes(k))
+    
+    if(!isAllowed){
+        return res.status(400).send("Invalid fields! You can only update: " + ALLOWED_UPDATES.join(", "))
+    }
+    // Check skills length only if skills is provided
+    if(data.skills && data.skills.length > 7){
+        return res.status(400).send("Cannot add more than 7 skills")
+    }
     try{
     const user = await User.findByIdAndUpdate({_id:userId},data,{
         runValidators:true

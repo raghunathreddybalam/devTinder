@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const validator = require("validator");
 
 const userSchema = mongoose.Schema({
     firstName :{
@@ -19,9 +20,17 @@ const userSchema = mongoose.Schema({
         unique :true, //  not allowing duplicate things ,like emial should be diiferent for everyone
         trim: true, // removes the spaces from characters and stores in db
         lowercase : true, // it will store in lower case in db
+        validate(value){
+            if(!validator.isEmail(value))
+                throw new Error("invalid email id")
+        }
     },
     password :{
-        type : String
+        type : String,
+        validate(value){
+            if(!validator.isStrongPassword(value))
+                throw new Error("password is not strong")
+        }
     },
     age :{
         type :Number,
@@ -36,7 +45,11 @@ const userSchema = mongoose.Schema({
     },
     photoUrl:{
         type : String,
-        default : "https://www.shutterstock.com/image-vector/isolated-object-avatar-dummy-symbol-260nw-1290296656.jpg"
+        default : "https://www.shutterstock.com/image-vector/isolated-object-avatar-dummy-symbol-260nw-1290296656.jpg",
+        validate(value){
+            if(!validator.isURL(value))
+                throw new Error("invalid photo ", value)
+        }
     },
     skills:{
         type: [String]
