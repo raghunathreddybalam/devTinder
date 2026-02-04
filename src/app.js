@@ -1,109 +1,156 @@
 const express = require("express");
 
-
+const {validationData} = require("./utils/validation");
+const bcrypt = require("bcrypt");
 const app  = express();
 const connectDB = require("./config/database");
-// const { adminAuth, userAuth } = require("./middlewares/auth");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken")
+const {  userAuth } = require("./middlewares/auth");
 const User = require("./models/user")
 app.use(express.json())
+app.use(cookieParser())
+
 
 
  
+app.post("/login", async (req,res)=>{
+    try{
+    const {email,password} = req.body
+
+    const user = await User.findOne({email:email});
+    if(!user){
+        throw new Error("email is invalid ")
+    }
+    const isPasswordvalid = await user.validatePassword(password);
+    if(isPasswordvalid){
+        
+        const token = await user.getJWT();
+        res.cookie("token",token)
+        res.send("login successfull")
+    }
+    else {
+        throw new Error("invalid credentails")
+    }
+} catch (error){
+    res.status(400).send("Error: " + error.message)
+}
+    
+})
+app.get("/profile",userAuth , async(req,res)=>{
+    try{
+       
+    const user = req.user
+    res.send(user)
+    } catch (error){
+        res.status(400).send("Error: " + error.message)
+    }
+})
+
 
 app.post("/signup", async(req,res)=>{
-    console.log(req.body,"req")
-   const user = new User(req.body)
+    // validate the data
+    //encrypt the data
+    
+   
 try {
+    validationData(req);
+    const {firstName, lastName, email, password} = req.body;
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new User({
+        firstName, lastName, email, password: passwordHash,
+    })
    await  user.save();
     res.send("user added successully")
+    console.log(res,"req")
 } catch (error){
-    res.status(400).send("Error saving the user" + error.message)
+    res.status(400).send("Error: " + error.message)
 }
 })
 // get user by id 
-app.get ("/user",async (req,res)=>{
-    const userEmail = req.body.email;
-    try{
-        const user = await User.findOne({email:userEmail})
-        if(!user){
-            res.status(404).send("user not found")
-        }else{
-            res.send(user)
-        }
+// app.get ("/user",async (req,res)=>{
+//     const userEmail = req.body.email;
+//     try{
+//         const user = await User.findOne({email:userEmail})
+//         if(!user){
+//             res.status(404).send("user not found")
+//         }else{
+//             res.send(user)
+//         }
        
-        // const user =await User.find({email:userEmail})
-        // if(user.length === 0){
-        //     res.status(404).send("user not found")
-        // }else {
-        //     res.send(user);
-        // }
+//         // const user =await User.find({email:userEmail})
+//         // if(user.length === 0){
+//         //     res.status(404).send("user not found")
+//         // }else {
+//         //     res.send(user);
+//         // }
       
         
-    }catch(error){
-        res.status(400).send("something went wrong")
-    }
+//     }catch(error){
+//         res.status(400).send("something went wrong")
+//     }
 
-})
+// })
 // get user by by id
-app.get("/getbyid", async (req,res)=>{
-    const userpassword = req.body.password
-    try{
-    const user = await User.findOne({password:userpassword})
-    console.log(user)
-    res.send(user)
-    } catch{
-        res.status(400).send("something wrong")
-    }
-})
+// app.get("/getbyid", async (req,res)=>{
+//     const userpassword = req.body.password
+//     try{
+//     const user = await User.findOne({password:userpassword})
+//     console.log(user)
+//     res.send(user)
+//     } catch{
+//         res.status(400).send("something wrong")
+//     }
+// })
 // delete user from db
-app.delete("/deleteuser", async (req,res)=>{
-    const userId = req.body.userId;
-    try{
-        const user = await User.findByIdAndDelete(userId)
-        res.send(user)
-    }catch{
-        res.status(400).send("something wrong") 
-    }
-})
+// app.delete("/deleteuser", async (req,res)=>{
+//     const userId = req.body.userId;
+//     try{
+//         const user = await User.findByIdAndDelete(userId)
+//         res.send(user)
+//     }catch{
+//         res.status(400).send("something wrong") 
+//     }
+// })
 // update the fields
 
-app.patch("/updateone/:userId",async (req,res)=>{
-    const userId = req.params?.userId
-    const data = req.body;
+// app.patch("/updateone/:userId",async (req,res)=>{
+//     const userId = req.params?.userId
+//     const data = req.body;
     
-    const ALLOWED_UPDATES =["gender","photoUrl","skills","password"]
+//     const ALLOWED_UPDATES =["gender","photoUrl","skills","password"]
 
-    const isAllowed = Object.keys(data).every((k)=>
-        ALLOWED_UPDATES.includes(k))
+//     const isAllowed = Object.keys(data).every((k)=>
+//         ALLOWED_UPDATES.includes(k))
     
-    if(!isAllowed){
-        return res.status(400).send("Invalid fields! You can only update: " + ALLOWED_UPDATES.join(", "))
-    }
-    // Check skills length only if skills is provided
-    if(data.skills && data.skills.length > 7){
-        return res.status(400).send("Cannot add more than 7 skills")
-    }
-    try{
-    const user = await User.findByIdAndUpdate({_id:userId},data,{
-        runValidators:true
-    })
+//     if(!isAllowed){
+//         return res.status(400).send("Invalid fields! You can only update: " + ALLOWED_UPDATES.join(", "))
+//     }
+//     // Check skills length only if skills is provided
+//     if(data.skills && data.skills.length > 7){
+//         return res.status(400).send("Cannot add more than 7 skills")
+//     }
+//     try{
+//     const user = await User.findByIdAndUpdate({_id:userId},data,{
+//         runValidators:true
+//     })
 
-    res.send(user)
-    }catch{
-        res.status(400).send("something wrong") 
-    }
-})
+//     res.send(user)
+//     }catch{
+//         res.status(400).send("something wrong") 
+//     }
+// })
 // get all users from db
-app.get("/feed",async (req,res)=>{
-    //const user = req.body;
-    try{
-        const user = await User.find({})
-        res.send(user)
+// app.get("/feed",async (req,res)=>{
+//     //const user = req.body;
+//     try{
+//         const user = await User.find({})
+//         res.send(user)
 
-    } catch(error){
- res.status(400).send("something went wrong")
-    }
-})
+//     } catch(error){
+//  res.status(400).send("something went wrong")
+//     }
+// })
 // // app.use("/",(err,req,res)=>{
 // //     if(err){
 // //         res.status(500).send("something went wrong")

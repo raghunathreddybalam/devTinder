@@ -71,3 +71,99 @@ push all code to remote origin
 - Without it, `req.body` would be `undefined` when clients send JSON data.
 - Created a `/signup` POST route that reads user data from `req.body`, creates a new `User` instance, and saves it to MongoDB.
 - Wrapped the save operation in try-catch: success returns "user added successfully", failure returns 400 with the error message.
+
+12.
+
+## Password Encryption with bcrypt
+
+- Never store passwords as plain text — if database is hacked, all passwords are exposed.
+- **Hashing** = one-way conversion; you can't reverse a hash back to the original password.
+- **Salt** = random string added before hashing to make each hash unique (even for same passwords).
+- **Salt Rounds** = complexity level; `saltRounds = 10` means 2^10 = 1024 iterations.
+- Higher salt rounds = slower hashing = harder for hackers to brute-force.
+- Use `bcrypt.hash(password, 10)` to create a hash during signup.
+- Use `bcrypt.compare(password, storedHash)` to verify password during login.
+- `bcrypt.compare()` returns `true` if password matches, `false` otherwise.
+
+13.
+
+## Mongoose Schema Validation
+
+- **Built-in validators** (`minLength`, `maxLength`, `required`, `min`, `max`) generate automatic error messages.
+- **Custom validators** use `validate(value) { throw new Error("...") }` for custom error messages.
+- Validation runs when calling `.save()` on a document.
+- `unique: true` creates a MongoDB index, not a validator — it only works if index was created successfully.
+- If duplicates existed before adding `unique: true`, the index fails silently. Use `Model.syncIndexes()` to recreate.
+
+14.
+
+## API Data Validation Pattern
+
+- Validate data BEFORE database operations for faster failure and cleaner errors.
+- Use `Object.keys(data).every(k => ALLOWED_UPDATES.includes(k))` to whitelist allowed fields.
+- This prevents users from updating sensitive fields like `email` or `password` through update APIs.
+- Return early with `return res.status(400).send("error")` if validation fails.
+
+15.
+
+## Cookie vs Token Authentication
+
+| Feature   | Cookie 🍪               | Token 🎟️                  |
+| --------- | ----------------------- | ------------------------- |
+| Stored by | Browser (automatically) | You (localStorage/memory) |
+| Sent by   | Browser (automatically) | You (manually in headers) |
+| Works on  | Same domain only        | Any domain (APIs, mobile) |
+| Best for  | Traditional websites    | APIs, mobile apps, SPAs   |
+
+16.
+
+## JWT (JSON Web Token) Authentication
+
+### What is JWT?
+
+- A signed token containing user data (like user ID).
+- Server creates it, client stores it, server verifies it later.
+- Structure: `header.payload.signature` (e.g., `eyJhbG...`)
+
+### Login Flow:
+
+1. User sends email & password to `/login`.
+2. Server finds user by email in database.
+3. Server compares password with stored hash using `bcrypt.compare()`.
+4. If valid, server creates JWT: `jwt.sign({_id: user._id}, "secret")`.
+5. Server sends token to browser as cookie: `res.cookie("token", token)`.
+6. Browser stores cookie automatically.
+
+### Profile/Protected Route Flow:
+
+1. User visits `/profile`.
+2. Browser automatically sends cookie with request.
+3. Server extracts token from cookies: `const { token } = req.cookies`.
+4. Server verifies token: `jwt.verify(token, "secret")` — returns decoded data or throws error.
+5. Server extracts user ID from decoded token: `const { _id } = decodedMssg`.
+6. Server finds user in DB: `User.findById(_id)`.
+7. If user exists, send user data; otherwise, send error.
+
+### Why Check if User Exists After Token Verification?
+
+- Token validity ≠ User existence.
+- User could be deleted after login but token still valid.
+- Always verify user still exists in database.
+
+17.
+
+## Cookie Parser Middleware
+
+- Install: `npm install cookie-parser`
+- Use: `app.use(cookieParser())` to parse cookies from requests.
+- Access cookies: `req.cookies` returns an object like `{ token: "abc", sessionId: "xyz" }`.
+- Set cookies: `res.cookie("name", "value")` sends cookie to browser.
+
+18.
+
+## JavaScript Destructuring
+
+- Shortcut to extract properties from objects.
+- `const { token } = cookies` is same as `const token = cookies.token`.
+- Can extract multiple: `const { name, email, age } = user`.
+- Works with arrays too: `const [first, second] = arr`.

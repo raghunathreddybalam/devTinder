@@ -1,65 +1,78 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const userSchema = mongoose.Schema({
-    firstName :{
-        type : String,
-        required :true,
-        minLength :4,
-        maxLength:50,
-    },
-    lastName : {
-        type : String,
+    firstName: {
+        type: String,
         required: true,
-        minLength:2,
-        maxLength:50,
+        minLength: 4,
+        maxLength: 50,
+    },
+    lastName: {
+        type: String,
+        required: true,
+        minLength: 2,
+        maxLength: 50,
     },
     email: {
-        type : String,
+        type: String,
         required: true, // mandatory field to store ,otherwise it will throw error 
-        unique :true, //  not allowing duplicate things ,like emial should be diiferent for everyone
+        unique: true, //  not allowing duplicate things ,like emial should be diiferent for everyone
         trim: true, // removes the spaces from characters and stores in db
-        lowercase : true, // it will store in lower case in db
-        validate(value){
-            if(!validator.isEmail(value))
+        lowercase: true, // it will store in lower case in db
+        validate(value) {
+            if (!validator.isEmail(value))
                 throw new Error("invalid email id")
         }
     },
-    password :{
-        type : String,
-        validate(value){
-            if(!validator.isStrongPassword(value))
+    password: {
+        type: String,
+        validate(value) {
+            if (!validator.isStrongPassword(value))
                 throw new Error("password is not strong")
         }
     },
-    age :{
-        type :Number,
-        min :18,
+    age: {
+        type: Number,
+        min: 18,
     },
-    gender :{
-        type : String,
-        validate(value){
-            if(!["male","female","others"].includes(value))
+    gender: {
+        type: String,
+        validate(value) {
+            if (!["male", "female", "others"].includes(value))
                 throw new Error(" enter correct gender")
         }
     },
-    photoUrl:{
-        type : String,
-        default : "https://www.shutterstock.com/image-vector/isolated-object-avatar-dummy-symbol-260nw-1290296656.jpg",
-        validate(value){
-            if(!validator.isURL(value))
+    photoUrl: {
+        type: String,
+        default: "https://www.shutterstock.com/image-vector/isolated-object-avatar-dummy-symbol-260nw-1290296656.jpg",
+        validate(value) {
+            if (!validator.isURL(value))
                 throw new Error("invalid photo ", value)
         }
     },
-    skills:{
+    skills: {
         type: [String]
     },
-    about :{
-        type : String,
-        default :"this is default value"
+    about: {
+        type: String,
+        default: "this is default value"
     }
-},{
-    timestamps:true,
+}, {
+    timestamps: true,
 })
+userSchema.methods.getJWT = async function () {
+    const user = this;
+    const token = await jwt.sign({ _id: user._id }, "secret", { expiresIn: "1h" })
+    return token;
+}
+userSchema.methods.validatePassword = async function (passwordInputuser) {
+    const user = this;
+    const passwordHash = user.password
+    const isPasswordvalid = await bcrypt.compare(passwordInputuser, passwordHash);
+    return isPasswordvalid;
+}
 const User = mongoose.model("User", userSchema);
 module.exports = User; 
