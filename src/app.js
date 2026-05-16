@@ -1,72 +1,20 @@
 const express = require("express");
-
-const {validationData} = require("./utils/validation");
-const bcrypt = require("bcrypt");
 const app  = express();
 const connectDB = require("./config/database");
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken")
-const {  userAuth } = require("./middlewares/auth");
-const User = require("./models/user")
+
 app.use(express.json())
 app.use(cookieParser())
 
+const authRouter = require("./routes/auth.js");
+const profileRouter = require("./routes/profile.js");
+const requestRouter = require("./routes/request.js");
+
+app.use("/",authRouter);
+app.use("/", profileRouter);
+app.use("/",requestRouter);
 
 
- 
-app.post("/login", async (req,res)=>{
-    try{
-    const {email,password} = req.body
-
-    const user = await User.findOne({email:email});
-    if(!user){
-        throw new Error("email is invalid ")
-    }
-    const isPasswordvalid = await user.validatePassword(password);
-    if(isPasswordvalid){
-        
-        const token = await user.getJWT();
-        res.cookie("token",token)
-        res.send("login successfull")
-    }
-    else {
-        throw new Error("invalid credentails")
-    }
-} catch (error){
-    res.status(400).send("Error: " + error.message)
-}
-    
-})
-app.get("/profile",userAuth , async(req,res)=>{
-    try{
-       
-    const user = req.user
-    res.send(user)
-    } catch (error){
-        res.status(400).send("Error: " + error.message)
-    }
-})
-
-
-app.post("/signup", async(req,res)=>{
-    // validate the data
-    //encrypt the data
-    
-   
-try {
-    validationData(req);
-    const {firstName, lastName, email, password} = req.body;
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = new User({
-        firstName, lastName, email, password: passwordHash,
-    })
-   await  user.save();
-    res.send("user added successully")
-    console.log(res,"req")
-} catch (error){
-    res.status(400).send("Error: " + error.message)
-}
-})
 // get user by id 
 // app.get ("/user",async (req,res)=>{
 //     const userEmail = req.body.email;
