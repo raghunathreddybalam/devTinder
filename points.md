@@ -207,6 +207,29 @@ GET http://localhost:3000/profile
 (Cookie will be sent automatically if using same client)
 ```
 
+### To test profile edit (after login):
+
+```
+PATCH http://localhost:3000/profile/edit
+Body (JSON) — only allowed fields:
+{
+    "firstName": "Johnny",
+    "age": 25,
+    "gender": "male"
+}
+```
+
+### To test change password (after login):
+
+```
+PATCH http://localhost:3000/profile/password
+Body (JSON):
+{
+    "oldPassword": "Test@1234",
+    "newPassword": "NewPass@5678"
+}
+```
+
 ---
 
 ## 6. Route Refactor & Bug Fixes (May 16, 2026)
@@ -220,7 +243,7 @@ We moved API logic out of `src/app.js` into **route modules** under `src/routes/
 | File | Responsibility |
 | ---- | -------------- |
 | `src/routes/auth.js` | `POST /signup`, `POST /login` |
-| `src/routes/profile.js` | `GET /profile` (protected with `userAuth`) |
+| `src/routes/profile.js` | `GET /profile`, `PATCH /profile/edit`, `PATCH /profile/password` (all protected with `userAuth`) |
 | `src/routes/request.js` | `POST /sendConnectionRequest` (protected) |
 | `src/middlewares/auth.js` | `userAuth` middleware (JWT from cookie) |
 | `src/app.js` | Express setup, DB connect, **mount routers** |
@@ -425,4 +448,191 @@ GET /profile
 
 ---
 
-_Last Updated: May 16, 2026_
+## 7. Profile Edit & Change Password APIs (May 25, 2026)
+
+This section summarizes what we built: **edit profile** and **change password** as protected routes in `src/routes/profile.js`, with validation helpers in `src/utils/validation.js`.
+
+### What we added (big picture)
+
+| Endpoint | Method | Auth | Purpose |
+| -------- | ------ | ---- | ------- |
+| `/profile/edit` | `PATCH` | `userAuth` | Update safe profile fields (`firstName`, `lastName`, `age`, `gender`) |
+| `/profile/password` | `PATCH` | `userAuth` | Change password using old + new password (hash before save) |
+
+**Why two separate APIs?**
+
+- Profile edit can copy fields from `req.body` onto the user document.
+- Password must **never** be updated that way — we must verify the **old** password, **hash** the new one, then save.
+
+---
+
+### Step 1 — API contract for change password
+
+| Item | Value |
+| ---- | ----- |
+| Method | `PATCH` |
+| Path | `/profile/password` |
+| Middleware | `userAuth` (JWT from cookie → `req.user`) |
+| Body | `oldPassword`, `newPassword` only |
+
+---
+
+### `validateEditProfile` (`src/utils/validation.js`)
+
+```javascript
+const validateEditProfile = (req) => {
+  const allowedFields = ["firstName", "lastName", "age", "gender"];
+  return Object.keys(req.body).every((field) => allowedFields.includes(field));
+};
+```
+
+**What it does:** Returns `true` only if every key in `req.body` is in the allowlist.
+
+**Why:** Stops clients from updating `email`, `password`, `skills`, etc. through `/profile/edit`.
+
+**Route flow (`PATCH /profile/edit`):**
+
+1. `userAuth` → sets `req.user`
+2. `validateEditProfile(req)` → if false, throw `"invalid request"`
+3. Copy each body field onto `loggedInUser`
+4. `loggedInUser.save()`
+5. Success message with `firstName`
+
+---
+
+### `validateChangePassword` (`src/utils/validation.js`)
+
+```javascript
+const validateChangePassword = (req) => {
+  const allowedFields = ["oldPassword", "newPassword"];
+  const keys = Object.keys(req.body);
+
+  if (keys.length !== 2 || !keys.every((field) => allowedFields.includes(field))) {
+    return false;
+  }
+
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) return false;
+  if (!validator.isStrongPassword(newPassword)) return false;
+  if (oldPassword === newPassword) return false;
+  return true;
+};
+```
+
+**Checks:**
+
+| Check | Reason |
+| ----- | ------ |
+| Exactly 2 fields: `oldPassword`, `newPassword` | No extra or missing fields |
+| Both non-empty | Required values |
+| `isStrongPassword(newPassword)` | Same rule as signup |
+| `oldPassword !== newPassword` | Must actually change password |
+
+---
+
+### `PATCH /profile/password` — route flow (`src/routes/profile.js`)
+
+1. **`userAuth`** — only logged-in user can change password; `req.user` is the MongoDB user document.
+2. **`validateChangePassword(req)`** — body shape + strong new password.
+3. **`loggedInUser.validatePassword(oldPassword)`** — compares plain old password with hash in DB (reuses User model method from login).
+4. If old password wrong → `400` with `"old password is incorrect"`.
+5. **`bcrypt.hash(newPassword, 10)`** — hash before storing (never save plain text).
+6. **`loggedInUser.password = passwordHash`** → **`save()`**.
+7. Success response: `"<firstName>, your password was updated successfully"`.
+
+**Imports added in `profile.js`:**
+
+- `bcrypt` — for hashing new password
+- `validateChangePassword` — from `../utils/validation.js`
+
+---
+
+### Request flow diagrams
+
+**Profile edit:**
+
+```
+PATCH /profile/edit + cookie
+    → userAuth (req.user)
+    → validateEditProfile
+    → copy allowed fields to loggedInUser
+    → save()
+    → 200 success message
+```
+
+**Change password:**
+
+```
+PATCH /profile/password + cookie
+    → userAuth (req.user)
+    → validateChangePassword
+    → validatePassword(oldPassword)
+    → bcrypt.hash(newPassword)
+    → save hash to loggedInUser.password
+    → 200 success message
+```
+
+---
+
+### How to test (Postman / Thunder Client)
+
+1. **Login** first (`POST /login`) so the `token` cookie is set.
+2. Use the **same client** for PATCH requests (cookie sent automatically).
+
+**Edit profile — success example:**
+
+```json
+PATCH http://localhost:3000/profile/edit
+{
+  "firstName": "Raghunath",
+  "age": 22,
+  "gender": "male"
+}
+```
+
+**Edit profile — fails (400):**
+
+- Body includes `password` or `email` → `"invalid request"`
+- Not logged in → fails at `userAuth`
+
+**Change password — success example:**
+
+```json
+PATCH http://localhost:3000/profile/password
+{
+  "oldPassword": "Test@1234",
+  "newPassword": "NewPass@5678"
+}
+```
+
+Then **login with new password** → should work. **Login with old password** → should fail.
+
+**Change password — fails (400):**
+
+| Case | Typical error |
+| ---- | ------------- |
+| Wrong `oldPassword` | `old password is incorrect` |
+| Weak `newPassword` | `invalid request` |
+| Same old and new | `invalid request` |
+| Missing field / extra field | `invalid request` |
+
+---
+
+### Security points (what we followed)
+
+1. **Password not on `/profile/edit` allowlist** — cannot change password via profile edit route.
+2. **Always verify old password** before changing — prevents account takeover if someone gets a session but not the password.
+3. **Always hash new password** with bcrypt (10 salt rounds) — same as signup.
+4. **Reuse `validatePassword()`** from User model — same bcrypt compare logic as login.
+5. **Protected routes** — both endpoints use `userAuth` middleware.
+
+---
+
+### Files touched in this session
+
+- `src/routes/profile.js` — `PATCH /profile/edit`, `PATCH /profile/password`, `bcrypt` import
+- `src/utils/validation.js` — `validateEditProfile`, `validateChangePassword`, exports
+
+---
+
+_Last Updated: May 25, 2026_
